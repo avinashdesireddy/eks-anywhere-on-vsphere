@@ -1,0 +1,95 @@
+apiVersion: anywhere.eks.amazonaws.com/v1alpha1
+kind: Cluster
+metadata:
+  name: demo
+spec:
+  clusterNetwork:
+    cniConfig:
+      cilium: {}
+    pods:
+      cidrBlocks:
+      - 192.168.0.0/16
+    services:
+      cidrBlocks:
+      - 10.96.0.0/12
+  controlPlaneConfiguration:
+    count: 2
+    endpoint:
+      host: "192.168.122.100"
+    machineGroupRef:
+      kind: VSphereMachineConfig
+      name: demo-cp
+  datacenterRef:
+    kind: VSphereDatacenterConfig
+    name: demo
+  externalEtcdConfiguration:
+    count: 3
+    machineGroupRef:
+      kind: VSphereMachineConfig
+      name: demo-etcd
+  kubernetesVersion: "1.26"
+  managementCluster:
+    name: demo
+  workerNodeGroupConfigurations:
+  - count: 2
+    machineGroupRef:
+      kind: VSphereMachineConfig
+      name: demo
+    name: md-0
+
+---
+apiVersion: anywhere.eks.amazonaws.com/v1alpha1
+kind: VSphereDatacenterConfig
+metadata:
+  name: demo
+spec:
+  datacenter: "eks_workshop"
+  insecure: true
+  network: "VM Network"
+  server: "192.168.122.22"
+    #thumbprint: ""
+
+---
+apiVersion: anywhere.eks.amazonaws.com/v1alpha1
+kind: VSphereMachineConfig
+metadata:
+  name: demo-cp
+spec:
+  datastore: "datastore1"
+  diskGiB: 25
+  folder: "cluster_1"
+  memoryMiB: 8192
+  numCPUs: 2
+  osFamily: bottlerocket
+  resourcePool: "rpool_1"
+
+---
+apiVersion: anywhere.eks.amazonaws.com/v1alpha1
+kind: VSphereMachineConfig
+metadata:
+  name: demo
+spec:
+  datastore: "datastore1"
+  diskGiB: 25
+  folder: "cluster_1"
+  memoryMiB: 8192
+  numCPUs: 2
+  osFamily: bottlerocket
+  resourcePool: "rpool_1"
+
+---
+apiVersion: anywhere.eks.amazonaws.com/v1alpha1
+kind: VSphereMachineConfig
+metadata:
+  name: demo-etcd
+spec:
+  datastore: "datastore1"
+  diskGiB: 25
+  folder: "cluster_1"
+  memoryMiB: 8192
+  numCPUs: 2
+  osFamily: bottlerocket
+  resourcePool: "rpool_1"
+
+---
+
