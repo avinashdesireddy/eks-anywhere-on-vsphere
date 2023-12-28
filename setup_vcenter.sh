@@ -42,7 +42,7 @@ fi
 
 VCSA_DEPLOY_BIN=/mnt/vcsa-cli-installer/lin64/vcsa-deploy
 
-#$VCSA_DEPLOY_BIN install --accept-eula --acknowledge-ceip --no-ssl-certificate-verification $VCSA_TEMPLATE_FILE
+$VCSA_DEPLOY_BIN install --accept-eula --acknowledge-ceip --no-ssl-certificate-verification $VCSA_TEMPLATE_FILE
 
 echo "Appliance Name is ready, you can now connect to it from your instance..."
 #socat TCP-LISTEN:443,fork TCP:192.168.122.3:443

@@ -13,7 +13,88 @@ set -eux
 
 ## Parse arguments
 SOURCE_ISO=$1
-KICKSTART_FILE=$2
+KICKSTART_FILE=$(mktemp)
+ADMIN_PASSWORD=myp@ssw0rd
+
+validate_password() {
+    local password=$1
+
+    # Check minimum length
+    if [ ${#password} -lt 8 ]; then
+        echo "Password must be at least 8 characters long."
+        return 1
+    fi
+
+    # Check for at least one uppercase letter
+    if ! [[ "$password" =~ [[:upper:]] ]]; then
+        echo "Password must contain at least one uppercase letter."
+        return 1
+    fi
+
+    # Check for at least one lowercase letter
+    if ! [[ "$password" =~ [[:lower:]] ]]; then
+        echo "Password must contain at least one lowercase letter."
+        return 1
+    fi
+
+    # Check for at least one digit
+    if ! [[ "$password" =~ [0-9] ]]; then
+        echo "Password must contain at least one digit."
+        return 1
+    fi
+
+    # Check for at least one special character
+    if ! [[ "$password" =~ [!@#\$%^&*()-+=] ]]; then
+        echo "Password must contain at least one special character (!@#\$%^&*()-+=)."
+        return 1
+    fi
+
+    # If all checks pass, the password is valid
+    echo "Password is valid."
+    return 0
+}
+
+
+cat > ${KICKSTART_FILE} <<EOF
+# Accept the VMware End User License Agreement
+vmaccepteula
+
+# Set the root password for the DCUI and Tech Support Mode
+rootpw ${ADMIN_PASSWORD}
+
+# Install on the first local disk available on machine
+install --firstdisk --overwritevmfs
+
+# Set the network to DHCP on the first network adapter
+network --bootproto=dhcp --device=vmnic0
+
+reboot
+
+###############################
+## Scripted Install - Part 2 ##
+###############################
+# Use busybox interpreter
+%firstboot --interpreter=busybox
+
+# Disable IPv6
+esxcli network ip set --ipv6-enabled=false
+
+# Enable SSH
+vim-cmd hostsvc/enable_ssh
+vim-cmd hostsvc/start_ssh
+
+# Enable and start ESXi Shell
+vim-cmd hostsvc/enable_esx_shell
+vim-cmd hostsvc/start_esx_shell
+
+# Enable NTP
+echo "server 0.au.pool.ntp.org" >> /etc/ntp.conf;
+echo "server 1.au.pool.ntp.org" >> /etc/ntp.conf;
+/sbin/chkconfig ntpd on;
+
+# Reboot to apply settings (disabling IPv6)
+esxcli system shutdown reboot -d 15 -r "rebooting after disabling IPv6"
+EOF
 
 # Set environment variables
 ## We use the label of the ISO image
@@ -50,14 +131,14 @@ sudo genisoimage -relaxed-filenames -J -R -o ${TARGET_ISO} -b isolinux.bin -c bo
 
 
 sudo mv ${TARGET_ISO} /var/lib/libvirt/images/
-sudo chmod 644 /var/lib/libvirt/images/new.iso
+#sudo chmod 644 /var/lib/libvirt/images/new.iso
 
 # Install VM using Target ISO
 NIC_DRIVER=vmxnet3
-DISK_SIZE=1024
+DISK_SIZE=800
 
 echo "Started Deployment, this may take few minutes..."
-virt-install --connect qemu:///system \
+sudo virt-install --connect qemu:///system \
         --name esxi-host \
         --ram 170000 \
         --vcpus=40 \
