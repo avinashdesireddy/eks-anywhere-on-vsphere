@@ -22,6 +22,14 @@ install_packages() {
     curl -L -o - "https://github.com/vmware/govmomi/releases/latest/download/govc_$(uname -s)_$(uname -m).tar.gz" | sudo tar -C /usr/local/bin -xvzf - govc
 }
 
+# Download VMware vSphere 8 & vCenter Server Appliance
+download_installer() {
+    # Get S3 bucket name starts with workshop
+    local bucket_name=$(aws s3 ls | grep workshop | awk '{print $3}')
+    # Download ISO files from bucket locally
+    aws s3 cp s3://$bucket_name/ . --recursive --exclude "*"  --include "*.iso"
+}
+
 # Function to generate a random password
 generate_password() {
     local length=$1
@@ -80,7 +88,7 @@ EOF
 
 # Create ESXI 
 create_esxi() {
-    local installer_iso=$1
+    local vmvisor_iso=$1
     local admin_password=$2
     #local vm_disk_size=$3
 
@@ -107,7 +115,7 @@ create_esxi() {
     mkdir -p ${TARGET_ISO_MOUNT}
 
     if [ $(df --output=fstype ${SOURCE_ISO_MOUNT}| tail -n1) != "iso9660" ]; then
-        sudo mount -o loop ${installer_iso} ${SOURCE_ISO_MOUNT}
+        sudo mount -o loop ${vmvisor_iso} ${SOURCE_ISO_MOUNT}
     fi
 
     rsync -av ${SOURCE_ISO_MOUNT}/ ${TARGET_ISO_MOUNT}
@@ -170,7 +178,7 @@ get_ip_address() {
 
 setup_vcsa() {
     #$domain_ip $domain_user $admin_password 
-    local installer_iso=$1
+    local vmvisor_iso=$1
     local domain_ip=$2
     local domain_user=$3
     local admin_password=$4
@@ -261,7 +269,7 @@ EOF
         echo "ISO file is already mounted at $mount_point."
     else
         # If not mounted, then mount it
-        sudo mount -o loop "$installer_iso" "$mount_point"
+        sudo mount -o loop "$vmvisor_iso" "$mount_point"
         echo "ISO file mounted at $mount_point."
     fi
         
@@ -328,61 +336,27 @@ EOF
     #export GOVC_PASSWORD="Admin@123"
 }
 
-# Parse command-line options
-while getopts ":i:a:" opt; do
-    case $opt in
-        i)
-            INSTALLER_ISO=$OPTARG
-            ;; 
-        a)
-            VCSA_ISO=$OPTARG
-            ;;        
-        \?)
-            echo "Invalid option: -$OPTARG"
-            usage
-            ;;
-        :)
-            echo "Option -$OPTARG requires an argument."
-            usage
-            ;;
-    esac
-done
-
-# Check if the required option is provided
-if [ -z "${INSTALLER_ISO}" ]; then
-    echo "Error: ESXi ISO file not specified."
-    usage
-fi
-
-# Check if the provided ISO file exists
-if [ ! -f "${INSTALLER_ISO}" ]; then
-    echo "${INSTALLER_ISO} is not a file."
-    exit 1
-fi
-
-# Check if the required option is provided
-if [ -z "${VCSA_ISO}" ]; then
-    echo "Error: VCSA (vCenter Server Appliance) ISO file not specified."
-    usage
-fi
-
-# Check if the provided ISO file exists
-if [ ! -f "${VCSA_ISO}" ]; then
-    echo "${VCSA_ISO} is not a file."
-    exit 1
-fi
-
 ##################################################
 ###################### MAIN ######################
 ##################################################
+
+# Read arguments from command line
+
 # Install packages
 install_packages
+
+# Download VMware vSphere 8 & vCenter Server Appliance
+#download_installer
+
+# Use find and grep to obtain the filename matching the specified pattern
+vmvisor_iso=$(find "." -type f -name "VMware-VMvisor-Installer*iso")
+vcsa_iso=$(find "." -type f -name "VMware-VCSA-all-*iso")
 
 # generate admin password
 admin_password='Admin@123' #$(generate_password 10)
 
 # Create esxi vm
-domain_name=esxi-vm #$(create_esxi $INSTALLER_ISO $admin_password)
+domain_name=$(create_esxi $vmvisor_iso $admin_password)
 echo "ESXi VM created successfully."
 
 echo "Starting VCSA setup"
@@ -395,4 +369,4 @@ if ! sudo virsh list --all | grep -q "\<$domain_name\>"; then
 fi
 
 domain_ip=$(get_ip_address $domain_name)
-setup_vcsa $VCSA_ISO $domain_ip "root" $admin_password 
+setup_vcsa $vcsa_iso $domain_ip "root" $admin_password 
