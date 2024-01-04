@@ -1,12 +1,6 @@
 #!/bin/sh
 set -eux
 
-# Function to display usage information
-usage() {
-    echo "Usage: $0 -i ESXi.iso -a vcsa.iso"
-    exit 1
-}
-
 # Install Packages
 install_packages() {
     echo "Installing packages..."
@@ -100,8 +94,7 @@ create_esxi() {
     local TARGET_ISO_MOUNT=${TMPDIR}/target_iso
     local TARGET_ISO=${TMPDIR}/esxi_ks_iso.iso
     local TARGET_ISO_NAME=esxi_ks_iso
-    local domain_name=esxi-vm
-
+    
     # setup kickstart file for esxi vm install
     local kickstart_file=$(create_kickstart_file $admin_password)
 
@@ -146,8 +139,13 @@ create_esxi() {
 
     sudo mv ${TARGET_ISO} /var/lib/libvirt/images/
     
-    echo "Started Deployment, this may take few minutes..."
-    sudo virt-install --connect qemu:///system \
+    # Check if domain exists
+    if sudo virsh list --all | grep -q ${domain_name}; then
+        echo "Domain ${domain_name} already exists."
+        echo $domain_name
+    else
+        echo "Started Deployment, this may take few minutes..."
+        sudo virt-install --connect qemu:///system \
             --name ${domain_name} \
             --ram 170000 \
             --vcpus=40 \
@@ -158,11 +156,12 @@ create_esxi() {
             --accelerate --network=network:default,model=${NIC_DRIVER} \
             --hvm --graphics vnc,listen=0.0.0.0 \
             --boot uefi \
-            --virt-type=kvm
-    #--debug
+            --virt-type=kvm #--debug
+        
+        echo "ESXI Deployment Success..."
+        echo $domain_name
+    fi
     
-    echo "Deployment Completed"
-    echo $domain_name
 }
 
 # Function to get the IP address of a virsh domain
@@ -272,8 +271,7 @@ EOF
         sudo mount -o loop "$vmvisor_iso" "$mount_point"
         echo "ISO file mounted at $mount_point."
     fi
-        
-    #fi
+
     VCSA_DEPLOY_BIN=/mnt/vcsa-cli-installer/lin64/vcsa-deploy
     sudo $VCSA_DEPLOY_BIN install --accept-eula --acknowledge-ceip --no-ssl-certificate-verification ${vcsa_template_file}
     echo "Appliance ${appliance_name} is ready, you can now connect to it from your instance..."
@@ -288,6 +286,7 @@ EOF
     echo "export ESXI_PASSWORD=${admin_password}"
     echo "export DATACENTER=eks_workshop"
 
+cat << EOF > $EXPORTS_FILE
     # Export environment variables above without print
     export GOVC_URL=https://${appliance_ip}
     export GOVC_URL=https://${appliance_ip}
@@ -298,7 +297,8 @@ EOF
     export ESXI_USERNAME=root
     export ESXI_PASSWORD=${admin_password}
     export DATACENTER=eks_workshop
-
+EOF
+    source $EXPORTS_FILE
     # Check if the datacenter already exists
     existing_datacenter=$(govc ls / | grep -E "$DATACENTER$" || true)
     if [ -n "$existing_datacenter" ]; then
@@ -341,6 +341,8 @@ EOF
 ##################################################
 
 # Read arguments from command line
+EXPORTS_FILE=~/.eksaconfig
+echo /dev/null > $EXPORTS_FILE
 
 # Install packages
 install_packages
@@ -354,19 +356,14 @@ vcsa_iso=$(find "." -type f -name "VMware-VCSA-all-*iso")
 
 # generate admin password
 admin_password='Admin@123' #$(generate_password 10)
+domain_name='esxi-vm'
 
 # Create esxi vm
-domain_name=$(create_esxi $vmvisor_iso $admin_password)
+create_esxi $vmvisor_iso $admin_password
 echo "ESXi VM created successfully."
 
 echo "Starting VCSA setup"
 #############################################
-
-# Check if domain is created successfully
-if ! sudo virsh list --all | grep -q "\<$domain_name\>"; then
-	echo "Error: Domain '$domain_name' not found."
-	exit 1
-fi
 
 domain_ip=$(get_ip_address $domain_name)
 setup_vcsa $vcsa_iso $domain_ip "root" $admin_password 
