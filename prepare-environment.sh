@@ -298,6 +298,7 @@ cat << EOF > $EXPORTS_FILE
     export ESXI_PASSWORD=${admin_password}
     export DATACENTER=eks_workshop
 EOF
+    sleep 5s
     source $EXPORTS_FILE
     # Check if the datacenter already exists
     existing_datacenter=$(govc ls / | grep -E "$DATACENTER$" || true)
@@ -362,8 +363,10 @@ domain_name='esxi-vm'
 create_esxi $vmvisor_iso $admin_password
 echo "ESXi VM created successfully."
 
+sleep 180
+
 echo "Starting VCSA setup"
 #############################################
 
 domain_ip=$(get_ip_address $domain_name)
-setup_vcsa $vcsa_iso $domain_ip "root" $admin_password 
+setup_vcsa $vcsa_iso $domain_ip "root" $admin_password
