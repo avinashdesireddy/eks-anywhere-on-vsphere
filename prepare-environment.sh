@@ -21,6 +21,7 @@ download_installer() {
     # Get S3 bucket name starts with workshop
     local bucket_name=$(aws s3 ls | grep workshop | awk '{print $3}')
     # Download ISO files from bucket locally
+
     aws s3 cp s3://$bucket_name/ . --recursive --exclude "*"  --include "*.iso"
 }
 
@@ -299,7 +300,7 @@ cat << EOF > $EXPORTS_FILE
     export DATACENTER=eks_workshop
 EOF
     sleep 5s
-    source $EXPORTS_FILE
+    . $EXPORTS_FILE
     # Check if the datacenter already exists
     existing_datacenter=$(govc ls / | grep -E "$DATACENTER$" || true)
     if [ -n "$existing_datacenter" ]; then
@@ -319,7 +320,6 @@ EOF
         govc host.add -dc=$DATACENTER -hostname $ESXI_HOST -username $ESXI_USERNAME -password $ESXI_PASSWORD -noverify
         echo "ESXi host '$ESXI_HOST' added to datacenter '$DATACENTER' successfully."
     fi
-
     
 
     #VCENTER_SERVER="192.168.122.22"
@@ -363,6 +363,8 @@ domain_name='esxi-vm'
 create_esxi $vmvisor_iso $admin_password
 echo "ESXi VM created successfully."
 
+sleep 180
+sleep 180
 sleep 180
 
 echo "Starting VCSA setup"
