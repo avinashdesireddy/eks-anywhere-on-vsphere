@@ -1,5 +1,5 @@
 #!/bin/bash
 
 
-virsh destroy esxi-host
-virsh undefine --remove-all-storage --nvram  esxi-host
+virsh destroy $1
+virsh undefine --remove-all-storage --nvram  $1
