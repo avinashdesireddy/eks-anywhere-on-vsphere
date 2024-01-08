@@ -183,7 +183,7 @@ setup_vcsa() {
     local domain_user=$3
     local admin_password=$4
 
-    local appliance_name="demo"
+    local appliance_name="vcsa-instance"
     local appliance_ip="192.168.122.22"
 
     vcsa_template_file=$(mktemp)
@@ -363,9 +363,7 @@ domain_name='esxi-vm'
 create_esxi $vmvisor_iso $admin_password
 echo "ESXi VM created successfully."
 
-sleep 180
-sleep 180
-sleep 180
+sleep 600
 
 echo "Starting VCSA setup"
 #############################################
