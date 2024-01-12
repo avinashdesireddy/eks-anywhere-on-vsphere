@@ -10,7 +10,8 @@ install_packages() {
         qemu-system-x86 \
         libvirt-dev \
         libvirt-clients \
-        virt-manager
+        virt-manager \
+        awscli
 
     # Install govc
     curl -L -o - "https://github.com/vmware/govmomi/releases/latest/download/govc_$(uname -s)_$(uname -m).tar.gz" | sudo tar -C /usr/local/bin -xvzf - govc
@@ -279,6 +280,7 @@ EOF
 
     # Print exports
     echo "export GOVC_URL=https://${appliance_ip}"
+    echo "export GOVC_HOST=${appliance_ip}"
     echo "export GOVC_USERNAME=Administrator@vsphere.local"
     echo "export GOVC_PASSWORD=${admin_password}"
     echo "export GOVC_INSECURE=1"
@@ -289,7 +291,7 @@ EOF
 
 cat << EOF > $EXPORTS_FILE
     # Export environment variables above without print
-    export GOVC_URL=https://${appliance_ip}
+    export GOVC_HOST=${appliance_ip}
     export GOVC_URL=https://${appliance_ip}
     export GOVC_USERNAME=Administrator@vsphere.local
     export GOVC_PASSWORD=${admin_password}
@@ -349,7 +351,7 @@ echo /dev/null > $EXPORTS_FILE
 install_packages
 
 # Download VMware vSphere 8 & vCenter Server Appliance
-#download_installer
+download_installer
 
 # Use find and grep to obtain the filename matching the specified pattern
 vmvisor_iso=$(find "." -type f -name "VMware-VMvisor-Installer*iso")
