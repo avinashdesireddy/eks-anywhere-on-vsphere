@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eux
 
+# redirect stdout/stderr to a file
+exec >setup.log 2>&1
+
 # Install Packages
 install_packages() {
     echo "Installing packages..."
