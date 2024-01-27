@@ -302,7 +302,7 @@ cat << EOF > $EXPORTS_FILE
     export ESXI_HOST=${domain_ip}
     export ESXI_USERNAME=root
     export ESXI_PASSWORD=${admin_password}
-    export DATACENTER=eks_workshop
+    export DATACENTER=eksa_workshop
 EOF
     sleep 5s
     . $EXPORTS_FILE
@@ -325,21 +325,6 @@ EOF
         govc host.add -dc=$DATACENTER -hostname $ESXI_HOST -username $ESXI_USERNAME -password $ESXI_PASSWORD -noverify
         echo "ESXi host '$ESXI_HOST' added to datacenter '$DATACENTER' successfully."
     fi
-    
-
-    #VCENTER_SERVER="192.168.122.22"
-    ##VCENTER_USER=""
-    #VCENTER_PASSWORD="Admin@123"
-    #NEW_DATACENTER="eks_workshop"
-    #ESXI_HOST="$DOM_IP_ADDRESS"
-    #ESXI_USERNAME="root"
-    #ESXI_PASSWORD="myp@ssw0rd"
-
-    # Connect to vCenter Server using connection params
-    #export GOVC_INSECURE=1
-    #export GOVC_URL="https://$VCENTER_SERVER"
-    #export GOVC_USERNAME="administrator@vsphere.local"
-    #export GOVC_PASSWORD="Admin@123"
 }
 
 ##################################################
@@ -347,8 +332,8 @@ EOF
 ##################################################
 
 # Read arguments from command line
-EXPORTS_FILE=~/.eksaconfig
-echo /dev/null > $EXPORTS_FILE
+EXPORTS_FILE=~/.vcenterconfig
+echo "ESXi & VCenter Installation is still in progress..." > $EXPORTS_FILE
 
 # Install packages
 install_packages
